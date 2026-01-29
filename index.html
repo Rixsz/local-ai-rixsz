@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RIXSZ | Advanced AI</title>
+    <meta name="description" content="Just A Rather Very Intelligent System.">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <span>RIXSZ</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-item active">New Chat</div>
+                <div class="nav-item">History</div>
+                <div class="nav-item">Models</div>
+                <div class="nav-item">Settings</div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="archive-btn" class="archive-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                        <rect x="1" y="3" width="22" height="5"></rect>
+                        <line x1="10" y1="12" x2="14" y2="12"></line>
+                    </svg>
+                    Archive & Clear
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <header class="chat-header">
+                <div class="chat-title">System Online</div>
+                <div class="model-selector-container">
+                    <select id="model-select" class="model-selector">
+                        <option value="llama3.2">⚡ Fast (Llama 3.2)</option>
+                        <option value="llama3.2:1b">🚀 Hyper Fast (1B)</option>
+                        <option value="llama3.1">🧠 Smart (Llama 3.1)</option>
+                        <option value="deepseek-r1:1.5b">🧩 Expert Logic (1.5B)</option>
+                        <option value="deepseek-r1:8b">🎓 PhD Logic (8B)</option>
+                    </select>
+                    <select id="persona-select" class="model-selector">
+                        <option value="rixsz">🛡️ RIXSZ</option>
+                        <option value="gemini">✨ Gemini</option>
+                        <option value="translator">🌐 Translator</option>
+                    </select>
+                    <button class="voice-toggle" id="voice-toggle" title="Toggle Voice">
+                        <svg id="voice-icon-on" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16"
+                            height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        </svg>
+                        <svg id="voice-icon-off" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <line x1="23" y1="9" x2="17" y2="15"></line>
+                            <line x1="17" y1="9" x2="23" y2="15"></line>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <div class="messages-container" id="chat-messages">
+                <div class="message-wrapper">
+                    <div class="message ai">
+                        Hello! I'm your local AI assistant. How can I help you today?
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea id="user-input" placeholder="Message LocalAI..." rows="1" autocomplete="off"></textarea>
+                    <button class="send-btn" id="send-btn" aria-label="Send message">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
