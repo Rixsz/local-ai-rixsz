@@ -263,25 +263,28 @@ textarea {
     display: block;
 }
 
-.send-btn {
-    position: absolute;
-    right: 12px;
-    bottom: 10px;
-    width: 36px;
-    height: 36px;
-    background-color: var(--accent-color);
+.send-btn,
+.stop-btn {
+    background: none;
     border: none;
-    border-radius: 10px;
-    color: white;
+    color: var(--accent-color);
     cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    position: absolute;
+    /* Added position for send-btn */
+    right: 12px;
+    /* Added position for send-btn */
+    bottom: 10px;
+    /* Added position for send-btn */
 }
 
 .send-btn:hover {
-    background-color: #0066d6;
+    background-color: rgba(0, 102, 214, 0.1);
     transform: scale(1.05);
 }
 
@@ -290,8 +293,40 @@ textarea {
 }
 
 .send-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+}
+
+.stop-btn {
+    background-color: #ff0000 !important;
+    /* Force Solid Red */
+    border: 3px solid white !important;
+    width: 80px !important;
+    /* Very Large */
+    height: 80px !important;
+    border-radius: 16px !important;
+
+    /* Center in input container */
+    position: absolute !important;
+    right: 20px !important;
+    bottom: 50% !important;
+    transform: translateY(50%) !important;
+
+    color: white !important;
+    z-index: 9999 !important;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.6) !important;
+}
+
+.stop-btn:hover {
+    transform: translateY(50%) scale(1.1) !important;
+    background-color: #ff3333 !important;
+    box-shadow: 0 0 40px rgba(255, 0, 0, 0.9) !important;
+}
+
+.stop-btn svg {
+    width: 40px !important;
+    height: 40px !important;
+    filter: none !important;
 }
 
 /* Animations */
@@ -309,4 +344,86 @@ textarea {
 
 .message {
     animation: fadeIn 0.3s ease forwards;
+}
+
+/* Generated Image Styles */
+.generated-image-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.generated-image {
+    max-width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+}
+
+.download-link {
+    display: inline-block;
+    color: var(--accent-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.download-link:hover {
+    text-decoration: underline;
+}
+
+/* Modal Styles */
+
+/* Dark Web Search Indicators */
+@keyframes pulse-onion {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+.typing-indicator {
+    color: var(--text-secondary);
+    font-style: italic;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Feature Card Styling */
+.feature-card {
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.1));
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+}
+
+.feature-card h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.feature-card p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
 }

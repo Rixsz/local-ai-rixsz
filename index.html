@@ -17,12 +17,16 @@
                 <div class="logo-icon"></div>
                 <span>RIXSZ</span>
             </div>
+            <div class="feature-card">
+                <h3>🧅 Dark Web Access</h3>
+                <p>Tor + .onion search enabled</p>
+            </div>
 
             <nav class="sidebar-nav">
-                <div class="nav-item active">New Chat</div>
-                <div class="nav-item">History</div>
-                <div class="nav-item">Models</div>
-                <div class="nav-item">Settings</div>
+                <div class="nav-item active" id="nav-new-chat">New Chat</div>
+                <div class="nav-item" id="nav-history">History</div>
+                <div class="nav-item" id="nav-models">Models</div>
+                <div class="nav-item" id="nav-settings">Settings</div>
             </nav>
 
             <div class="sidebar-footer">
@@ -33,7 +37,7 @@
                         <rect x="1" y="3" width="22" height="5"></rect>
                         <line x1="10" y1="12" x2="14" y2="12"></line>
                     </svg>
-                    Archive & Clear
+                    Clear
                 </button>
             </div>
         </aside>
@@ -91,10 +95,17 @@
                             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                         </svg>
                     </button>
+                    <button class="stop-btn" id="stop-btn" aria-label="Stop generation" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </main>
     </div>
+
+
 
     <script src="script.js"></script>
 </body>
