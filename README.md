@@ -30,7 +30,6 @@ Search the dark web using Ahmia:
 You can also use natural language:
 ```
 search for cybersecurity news
-who is Elon Musk
 ```
 
 ## Installation on Linux
