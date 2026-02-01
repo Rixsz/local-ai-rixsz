@@ -7,9 +7,31 @@ A beautiful, local AI workspace that runs completely offline on your Linux machi
 ## Features
 - 🚀 **100% Local**: Works with your local Ollama instance.
 - 🔒 **Private**: No data leaves your machine.
-- 🕵️ **Tor Search**: Optional anonymous search capability using Tor.
+- 🧅 **Dark Web Access**: Search .onion sites via Tor and Ahmia.
+- 🕵️ **Tor Search**: Anonymous search capability using Tor network.
 - 💾 **Saves History**: Archive your chat sessions locally.
 - 📱 **Responsive Design**: Modern, glassmorphic UI.
+
+## Special Commands
+
+### Tor Search (Regular Web)
+Search the regular web anonymously via Tor:
+```
+/search-tor latest news
+```
+
+### Dark Web Search (.onion sites)
+Search the dark web using Ahmia:
+```
+/search-deep hidden wiki
+```
+
+### Natural Language Search
+You can also use natural language:
+```
+search for cybersecurity news
+who is Elon Musk
+```
 
 ## Installation on Linux
 
