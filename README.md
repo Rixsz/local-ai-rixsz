@@ -37,10 +37,14 @@ search for cybersecurity news
 This project now runs natively across multiple Linux distributions (Ubuntu/Debian, Arch, Fedora) and Windows.
 
 ### 1. Prerequisites
-You need [Ollama](https://ollama.com) installed and running, along with Python 3.
+You need [Ollama](https://ollama.com/download/windows) installed and running, along with Python 3.
 
 *   **Linux**: Make sure you have `git`, `python3`, and `curl` installed.
-*   **Windows**: Download and install [Python for Windows](https://www.python.org/downloads/) (Make sure to check "Add Python to PATH" during installation) and [Git for Windows](https://git-scm.com/download/win).
+*   **Windows**: Download and install these essential tools:
+    *   **[Ollama for Windows](https://ollama.com/download/windows)** (The Local AI Engine)
+    *   **[Python for Windows](https://www.python.org/downloads/windows/)** (Make sure to check "Add Python to PATH" during installation)
+    *   **[Git for Windows](https://git-scm.com/download/win)** (To download the code)
+    *   **[Tor Expert Bundle](https://www.torproject.org/download/tor/)** (Optional - needed for private search features)
 
 ### 2. Download the Code
 Open your terminal (or Command Prompt/PowerShell on Windows) and clone this repository:
