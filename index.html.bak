@@ -18,14 +18,8 @@
                 <span>RIXSZ</span>
             </div>
             <div class="feature-card">
-                <h3>🧅 Dark Web Access</h3>
-                <p>Tor + .onion search enabled</p>
-            </div>
-
-            <div class="feature-card"
-                style="background: linear-gradient(135deg, rgba(255, 105, 180, 0.1), rgba(138, 43, 226, 0.1)); border: 1px solid rgba(255, 105, 180, 0.3);">
-                <h3>🎨 Image Generation</h3>
-                <p>AI-powered art creation</p>
+                <h3>🔍 Secure Search</h3>
+                <p>Tor-encrypted web access</p>
             </div>
 
             <nav class="sidebar-nav">
@@ -43,7 +37,7 @@
                         <rect x="1" y="3" width="22" height="5"></rect>
                         <line x1="10" y1="12" x2="14" y2="12"></line>
                     </svg>
-                    Clear
+                    Archive & Clear
                 </button>
             </div>
         </aside>
@@ -111,7 +105,34 @@
         </main>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button id="close-settings" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label>Interface Theme</label>
+                    <div class="theme-options">
+                        <div class="theme-circle" data-color="#007aff" style="background: #007aff;"></div> <!-- Blue -->
+                        <div class="theme-circle" data-color="#af52de" style="background: #af52de;"></div>
+                        <!-- Purple -->
+                        <div class="theme-circle" data-color="#34c759" style="background: #34c759;"></div>
+                        <!-- Green -->
+                        <div class="theme-circle" data-color="#ff9500" style="background: #ff9500;"></div>
+                        <!-- Orange -->
+                        <div class="theme-circle" data-color="#ff3b30" style="background: #ff3b30;"></div> <!-- Red -->
+                    </div>
+                </div>
 
+            </div>
+            <div class="modal-footer">
+                <button class="save-btn" id="save-settings">Done</button>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

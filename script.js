@@ -101,7 +101,7 @@ async function archiveSession() {
             chatHistory = [];
             chatMessages.innerHTML = '';
             // Restore greeting
-            appendMessage('ai', "Hello! I'm your local AI assistant RIXSZ. My memory has been reset and archived. How can I help you, Sir?");
+            chatSession.appendMessage('ai', "Hello! I'm your local AI assistant RIXSZ. My memory has been reset and archived. How can I help you, Sir?");
         } else {
             throw new Error(data.message);
         }
@@ -114,16 +114,6 @@ async function archiveSession() {
 }
 
 archiveBtn.addEventListener('click', archiveSession);
-
-function scrollToBottom() {
-    const threshold = 100; // px from bottom to trigger auto-scroll
-    const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < threshold;
-
-    if (isAtBottom) {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-}
-
 
 // Auto-resize textarea
 userInput.addEventListener('input', () => {
@@ -139,6 +129,79 @@ userInput.addEventListener('keydown', (e) => {
     }
 });
 
+// --- Advanced DOM & State Manager ---
+class ChatManager {
+    constructor() {
+        this.currentAbortController = null;
+        this.isGenerating = false;
+        this.scrollTimeout = null;
+    }
+
+    startGeneration() {
+        if (this.currentAbortController) this.currentAbortController.abort();
+        this.currentAbortController = new AbortController();
+        this.isGenerating = true;
+        this.toggleUI(true);
+        return this.currentAbortController.signal;
+    }
+
+    stopGeneration() {
+        if (this.currentAbortController) {
+            this.currentAbortController.abort();
+            this.currentAbortController = null;
+        }
+        this.isGenerating = false;
+        this.toggleUI(false);
+    }
+
+    toggleUI(generating) {
+        const sendBtnEl = document.getElementById('send-btn');
+        const stopBtnEl = document.getElementById('stop-btn');
+        if (sendBtnEl) sendBtnEl.style.display = generating ? 'none' : 'flex';
+        if (stopBtnEl) stopBtnEl.style.display = generating ? 'flex' : 'none';
+    }
+
+    appendMessage(role, text) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper`;
+
+        const msg = document.createElement('div');
+        msg.className = `message ${role}`;
+        
+        // Handle innerHTML for typing indicators/images vs setting plain text
+        if (text.includes('<') && text.includes('>')) {
+            msg.innerHTML = text;
+        } else {
+            msg.textContent = text;
+        }
+
+        wrapper.appendChild(msg);
+        chatMessages.appendChild(wrapper);
+        this.smoothScrollToBottom();
+
+        return { wrapper, msgContentNode: msg };
+    }
+
+    smoothScrollToBottom() {
+        if (this.scrollTimeout) return;
+        this.scrollTimeout = requestAnimationFrame(() => {
+            const threshold = 150;
+            const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < threshold;
+            if (isAtBottom || chatMessages.scrollTop === 0) { // Force scroll on first msgs
+                chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+            }
+            this.scrollTimeout = null;
+        });
+    }
+
+    appendStreamChunk(msgNode, chunkText) {
+        msgNode.appendChild(document.createTextNode(chunkText));
+        this.smoothScrollToBottom();
+    }
+}
+
+const chatSession = new ChatManager();
+
 // Sidebar Logic
 const navNewChat = document.getElementById('nav-new-chat');
 const navHistory = document.getElementById('nav-history');
@@ -149,12 +212,8 @@ navNewChat.addEventListener('click', () => {
     if (confirm("Start a new chat? This will clear current conversation.")) {
         chatHistory = [];
         chatMessages.innerHTML = '';
-        appendMessage('ai', "Hello! I'm your local AI assistant. How can I help you today?");
-        if (abortController) {
-            abortController.abort();
-            abortController = null;
-            toggleGenerationState(false);
-        }
+        chatSession.appendMessage('ai', "Hello! I'm your local AI assistant. How can I help you today?");
+        chatSession.stopGeneration();
     }
 });
 
@@ -173,7 +232,7 @@ navHistory.addEventListener('click', async () => {
                     historyList += `${index + 1}. ${file}\n`;
                 });
                 historyList += "\n(These are physical zip files in your history folder)";
-                appendMessage('system', historyList);
+                chatSession.appendMessage('system', historyList);
             }
         } else {
             alert("Error fetching history: " + data.message);
@@ -208,7 +267,7 @@ sendBtn.addEventListener('click', sendMessage);
 async function performSearch(query, signal, isDarkWeb = false) {
     const searchIcon = isDarkWeb ? '🧅' : '🔐';
     const searchType = isDarkWeb ? 'Dark Web (.onion)' : 'Secure Web (Tor)';
-    appendMessage('ai', `${searchIcon} Accessing ${searchType}...`);
+    chatSession.appendMessage('ai', `${searchIcon} Accessing ${searchType}...`);
 
     try {
         const endpoint = isDarkWeb ? '/api/search-onion' : '/api/search';
@@ -235,25 +294,10 @@ async function performSearch(query, signal, isDarkWeb = false) {
 
 // Stop Generation Logic
 const stopBtn = document.getElementById('stop-btn');
-let abortController = null;
-
-function toggleGenerationState(isGenerating) {
-    if (isGenerating) {
-        sendBtn.style.display = 'none';
-        stopBtn.style.display = 'flex';
-    } else {
-        sendBtn.style.display = 'flex';
-        stopBtn.style.display = 'none';
-    }
-}
 
 stopBtn.addEventListener('click', () => {
-    if (abortController) {
-        abortController.abort();
-        abortController = null;
-        toggleGenerationState(false);
-        appendMessage('system', 'Generation stopped by user.');
-    }
+    chatSession.stopGeneration();
+    chatSession.appendMessage('system', 'Generation stopped by user.');
 });
 
 async function sendMessage() {
@@ -265,28 +309,24 @@ async function sendMessage() {
     userInput.style.height = '56px';
 
     // Add user message to UI
-    appendMessage('user', text);
+    chatSession.appendMessage('user', text);
 
     // Prepare AI message shell
-    const aiMsgWrapper = appendMessage('ai', '');
-    const aiMsgContent = aiMsgWrapper.querySelector('.message');
-    aiMsgContent.innerHTML = '<span class="typing-indicator">...</span>';
+    const { msgContentNode: aiMsgContent } = chatSession.appendMessage('ai', '<span class="typing-indicator">...</span>');
 
-    toggleGenerationState(true); // Show stop button
+    // Start Generation via ChatManager
+    const signal = chatSession.startGeneration();
 
     // Define Personas
     const persona = personaSelect.value;
     const personas = {
-        rixsz: "You are RIXSZ, a highly advanced AI assistant. Address me simply as 'Sir'. Be witty, extremely concise, and efficient. Do not be chatty. Your goal is speed and precision. Keep answers short",
-        gemini: "You are a helpful, harmless, and honest AI assistant. Be polite, professional, and provide detailed answers. Act like Gemini.",
+        rixsz: "You are RIXSZ, a highly advanced AI assistant with image generation capabilities. Address me simply as 'Sir'. Be witty, extremely concise, and efficient. Do not be chatty. Your goal is speed and precision. Keep answers short. IMPORTANT: You can generate images - if the user asks you to create, draw, paint, or generate an image, acknowledge that you will create it.",
+        gemini: "You are a helpful, harmless, and honest AI assistant with image generation capabilities. Be polite, professional, and provide detailed answers. Act like Gemini. You can create images when users ask you to draw, paint, or generate visual content.",
         translator: "You are a professional translator. Detect the source language and translate the user's text into English (or the requested language). Provide ONLY the translation. Do not explain anything."
     };
 
     let systemPrompt = personas[persona] || personas.rixsz; // Default to RIXSZ
     let finalPrompt = text;
-
-    // Initialize AbortController EARLY so stop button works during search
-    abortController = new AbortController();
 
     // Check for special commands first
     let isCommand = false;
@@ -310,16 +350,15 @@ async function sendMessage() {
         try {
             const searchIcon = isDarkWebSearch ? '🧅' : '🔐';
             const searchType = isDarkWebSearch ? 'DARK WEB' : 'TOR NETWORK';
-            appendMessage('ai', `${searchIcon} ACCESSING ${searchType}... Query: "${commandQuery}"`);
+            chatSession.appendMessage('ai', `${searchIcon} ACCESSING ${searchType}... Query: "${commandQuery}"`);
 
-            const searchResults = await performSearch(commandQuery, abortController.signal, isDarkWebSearch);
+            const searchResults = await performSearch(commandQuery, signal, isDarkWebSearch);
 
             aiMsgContent.innerHTML = '';
             aiMsgContent.textContent = searchResults;
-            scrollToBottom();
+            chatSession.smoothScrollToBottom();
 
-            toggleGenerationState(false);
-            abortController = null;
+            chatSession.stopGeneration();
             return;
         } catch (error) {
             if (error.name === 'AbortError') {
@@ -328,13 +367,10 @@ async function sendMessage() {
                 console.error('Search Error:', error);
                 aiMsgContent.textContent = `Error: ${error.message}`;
             }
-            toggleGenerationState(false);
-            abortController = null;
+            chatSession.stopGeneration();
             return;
         }
     }
-
-    // Initialize AbortController EARLY so stop button works during search (redundant but safe)
 
     // Advanced Search Logic
     const searchPatterns = [
@@ -377,23 +413,53 @@ async function sendMessage() {
         if (query) break;
     }
 
-    // Image Generation Logic
-    // Image Generation Logic
-    // Broad regex to capture "draw", "paint", "generate image" anywhere, but usually as an instruction
-    const imageRegex = /(?:can\s+you|please)?\s*\b(draw|paint|generate|create)\b\s+(?:an\s+image|a\s+picture|a\s+photo|something|of)?/i;
-    const isImageRequest = imageRegex.test(lowerText) || lowerText.includes('image of') || lowerText.includes('picture of');
+    // Image Generation Logic - Enhanced Detection
+    const imageKeywords = [
+        'draw', 'paint', 'generate', 'create', 'make', 'design',
+        'illustrate', 'sketch', 'render', 'visualize', 'show me'
+    ];
 
+    const imageNouns = [
+        'image', 'picture', 'photo', 'illustration', 'artwork',
+        'drawing', 'painting', 'sketch', 'visual', 'graphic'
+    ];
+
+    let isImageRequest = false;
     let imagePrompt = null;
 
+    // Check for explicit image generation requests
+    for (const keyword of imageKeywords) {
+        const pattern = new RegExp(`\\b${keyword}\\b`, 'i');
+        if (pattern.test(lowerText)) {
+            for (const noun of imageNouns) {
+                if (lowerText.includes(noun)) {
+                    isImageRequest = true;
+                    break;
+                }
+            }
+            // Also check for "draw/paint/create [something]" without explicit image noun
+            if (!isImageRequest && pattern.test(lowerText)) {
+                const afterKeyword = text.split(new RegExp(keyword, 'i'))[1];
+                if (afterKeyword && afterKeyword.trim().length > 3) {
+                    isImageRequest = true;
+                }
+            }
+            if (isImageRequest) break;
+        }
+    }
+
     if (isImageRequest) {
-        // specific check to avoid false positives?
-        // Let's try to extract the subject
-        imagePrompt = text.replace(/^(can\s+you|please)?\s*(draw|paint|generate|create)\s*(an\s+image|a\s+picture|a\s+photo|of)?\s*/i, '').trim();
+        // Extract the actual prompt by removing command words
+        imagePrompt = text
+            .replace(/^(can\s+you|please|could\s+you|would\s+you)?\s*/i, '')
+            .replace(/\b(draw|paint|generate|create|make|design|illustrate|sketch|render|visualize|show\s+me)\b\s*/i, '')
+            .replace(/\b(an?\s+)?(image|picture|photo|illustration|artwork|drawing|painting|sketch|visual|graphic)\s+(of|for|with)?\s*/i, '')
+            .trim();
     }
 
     if (imagePrompt && imagePrompt.length > 2) {
-        appendMessage('ai', `🎨 Painting: "${imagePrompt}"...`);
-        aiMsgContent.innerHTML = '<span class="typing-indicator">... creating masterpiece ...</span>';
+        chatSession.appendMessage('ai', `🎨 Creating artwork: "${imagePrompt}"...`);
+        aiMsgContent.innerHTML = '<span class="typing-indicator">✨ Generating your masterpiece...</span>';
 
         try {
             const imgResponse = await fetch('/api/generate-image', {
@@ -406,26 +472,47 @@ async function sendMessage() {
             if (imgData.status === 'success') {
                 const imgHTML = `<div class="generated-image-container">
                     <img src="data:image/png;base64,${imgData.image}" alt="${imagePrompt}" class="generated-image">
-                    <a href="data:image/png;base64,${imgData.image}" download="rixsz_${Date.now()}.png" class="download-link">Download</a>
+                    <a href="data:image/png;base64,${imgData.image}" download="rixsz_${Date.now()}.png" class="download-link">💾 Download Image</a>
                 </div>`;
                 aiMsgContent.innerHTML = imgHTML;
-                scrollToBottom();
-                return; // Stop processing text generation
+                chatSession.smoothScrollToBottom();
+
+                // Speak confirmation if voice is enabled
+                speakText("Your image has been generated, Sir.");
             } else {
                 throw new Error(imgData.message);
             }
         } catch (e) {
-            aiMsgContent.textContent = `Image Generation Failed: ${e.message}`;
-            return;
+            const errorMsg = e.message || 'Unknown error';
+            let userFriendlyMsg = '';
+
+            if (errorMsg.includes('Stable Diffusion') || errorMsg.includes('7860')) {
+                userFriendlyMsg = `⚠️ Image generation backend is offline.\n\n` +
+                    `To enable image generation:\n` +
+                    `1. Install Stable Diffusion WebUI (AUTOMATIC1111)\n` +
+                    `2. Launch it on port 7860\n` +
+                    `3. Try your request again\n\n` +
+                    `Alternative: Use online services or other local AI image generators.`;
+            } else if (errorMsg.includes('fetch')) {
+                userFriendlyMsg = `❌ Cannot connect to image generation service.\n\n` +
+                    `Please ensure Stable Diffusion WebUI is running on http://127.0.0.1:7860`;
+            } else {
+                userFriendlyMsg = `❌ Image Generation Failed: ${errorMsg}`;
+            }
+
+            aiMsgContent.textContent = userFriendlyMsg;
+            chatSession.smoothScrollToBottom();
+        } finally {
+            chatSession.stopGeneration();
         }
+        return; // Stop processing text generation
     }
 
     try {
         if (query) {
-            const searchType = searchType || 'general';
-            appendMessage('ai', `🔐 ACCESSING TOR NETWORK... Targeted Search [${searchType.toUpperCase()}]`);
-            // Now passing signal to performSearch
-            const searchResults = await performSearch(query, abortController.signal, false);
+            const searchTypeStr = searchType || 'general';
+            chatSession.appendMessage('ai', `🔐 ACCESSING TOR NETWORK... Targeted Search [${searchTypeStr.toUpperCase()}]`);
+            const searchResults = await performSearch(query, signal, false);
 
             systemPrompt += `\n\nCONTEXT FROM SECURE WEB SEARCH (Query: ${query}):\n${searchResults}\n\nUse this context to answer the user's question accurately. If looking for social media, list the handles/URLs found.`;
 
@@ -450,7 +537,7 @@ async function sendMessage() {
                 messages: messages,
                 stream: true
             }),
-            signal: abortController.signal
+            signal: signal
         });
 
         if (!response.ok) throw new Error('Failed to connect to Ollama');
@@ -475,8 +562,7 @@ async function sendMessage() {
                     if (json.message && json.message.content) {
                         const content = json.message.content;
                         fullResponse += content;
-                        aiMsgContent.textContent = fullResponse;
-                        scrollToBottom();
+                        chatSession.appendStreamChunk(aiMsgContent, content); // FAST APPEND
                     }
                     if (json.done) {
                         chatHistory.push(userMsg);
@@ -502,24 +588,7 @@ async function sendMessage() {
             aiMsgContent.textContent = `Error: ${error.message}. Make sure Ollama is running.`;
         }
     } finally {
-        toggleGenerationState(false);
-        abortController = null;
+        chatSession.stopGeneration();
     }
 }
-
-function appendMessage(role, text) {
-    const wrapper = document.createElement('div');
-
-
-    wrapper.className = 'message-wrapper';
-
-    const msg = document.createElement('div');
-    msg.className = `message ${role}`;
-    msg.textContent = text;
-
-    wrapper.appendChild(msg);
-    chatMessages.appendChild(wrapper);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    return wrapper;
-}
+// Removed old appendMessage
