@@ -11,6 +11,27 @@ from datetime import datetime
 
 PORT = 8000
 TOR_PROXY = "socks5h://127.0.0.1:9050"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "") # Load from environment
+GEMINI_MODEL = "gemini-1.5-pro-002" # Latest Pro model
+SD_API_URL = "http://127.0.0.1:7860/sdapi/v1/txt2img"
+
+def get_local_code_context():
+    """Scans the local directory for code to inject into Gemini cache."""
+    context = ""
+    excluded_dirs = {'.git', 'history', '__pycache__'}
+    included_ext = {'.js', '.py', '.html', '.css', '.sh', '.bat'}
+    
+    for root, dirs, files in os.walk('.'):
+        dirs[:] = [d for d in dirs if d not in excluded_dirs]
+        for file in files:
+            if any(file.endswith(ext) for ext in included_ext):
+                path = os.path.join(root, file)
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        context += f"\n--- FILE: {path} ---\n{f.read()}\n"
+                except:
+                    pass
+    return context
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
@@ -140,11 +161,69 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 
             except Exception as e:
                 print(f"❌ Dark Web Search Error: {e}")
-                self.send_response(500)
-                self.send_header('Content-type', 'application/json')
+        elif self.path == '/api/chat-gemini':
+            # High-Intelligence Reasoning via Gemini 1.5 Pro
+            if not GEMINI_API_KEY:
+                self.send_response(401)
                 self.end_headers()
-                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
-        
+                self.wfile.write(json.dumps({"error": "Missing GEMINI_API_KEY environment variable."}).encode('utf-8'))
+                return
+
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            messages = data.get('messages', [])
+            
+            print(f"🧠 Reasoning via Gemini 1.5 Pro...")
+            
+            try:
+                # Basic Multi-turn to Gemini format conversion
+                gemini_contents = []
+                for msg in messages:
+                    role = "user" if msg['role'] == "user" else "model"
+                    if msg['role'] == "system":
+                        # Gemini uses system_instruction in the config, but we can prepend it to the first user message for simplicity in this REST call
+                        continue
+                    gemini_contents.append({"role": role, "parts": [{"text": msg['content']}]})
+
+                # Implement CoT & System Instructions
+                system_instruction = messages[0]['content'] if messages[0]['role'] == 'system' else "You are a Senior AI Architect."
+                
+                # REST call to Gemini
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:streamGenerateContent?key={GEMINI_API_KEY}"
+                
+                payload = {
+                    "contents": gemini_contents,
+                    "system_instruction": {"parts": [{"text": system_instruction}]},
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "topP": 0.95,
+                        "maxOutputTokens": 8192,
+                    }
+                }
+
+                req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+                
+                # Stream the response back to the client
+                self.send_response(200)
+                self.send_header('Content-type', 'text/event-stream')
+                self.send_header('Cache-Control', 'no-cache')
+                self.end_headers()
+
+                with urllib.request.urlopen(req) as response:
+                    while True:
+                        line = response.readline()
+                        if not line: break
+                        # Gemini returns a JSON list of candidates in stream, we pass it through
+                        self.wfile.write(line)
+                        self.wfile.flush()
+
+            except Exception as e:
+                print(f"❌ Gemini Error: {e}")
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+
         elif self.path == '/api/generate-image':
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -162,8 +241,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "height": 512
                 }
                 
-                # Proxy to Local Stable Diffusion (Default Port 7860)
-                sd_url = "http://127.0.0.1:7860/sdapi/v1/txt2img"
+                # Proxy to Local Stable Diffusion
+                sd_url = SD_API_URL
                 req = urllib.request.Request(sd_url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
                 
                 with urllib.request.urlopen(req) as response:

@@ -168,12 +168,8 @@ class ChatManager {
         const msg = document.createElement('div');
         msg.className = `message ${role}`;
         
-        // Handle innerHTML for typing indicators/images vs setting plain text
-        if (text.includes('<') && text.includes('>')) {
-            msg.innerHTML = text;
-        } else {
-            msg.textContent = text;
-        }
+        // Handle CoT blocks and Images
+        this.processMessageContent(msg, text);
 
         wrapper.appendChild(msg);
         chatMessages.appendChild(wrapper);
@@ -182,12 +178,42 @@ class ChatManager {
         return { wrapper, msgContentNode: msg };
     }
 
+    processMessageContent(node, text) {
+        if (!text) return;
+        
+        // Case 1: Image HTML
+        if (text.includes('generated-image-container')) {
+            node.innerHTML = text;
+            return;
+        }
+
+        // Case 2: CoT thought block parsing
+        if (text.includes('<thought>')) {
+            const parts = text.split(/<\/?thought>/);
+            node.innerHTML = '';
+            if (parts[1]) {
+                const thoughtEl = document.createElement('details');
+                thoughtEl.className = 'thought-block';
+                thoughtEl.innerHTML = `<summary>💡 Thinking Process</summary><div class="thought-content">${parts[1]}</div>`;
+                node.appendChild(thoughtEl);
+            }
+            if (parts[2]) {
+                const textEl = document.createElement('div');
+                textEl.textContent = parts[2];
+                node.appendChild(textEl);
+            }
+            return;
+        }
+
+        node.textContent = text;
+    }
+
     smoothScrollToBottom() {
         if (this.scrollTimeout) return;
         this.scrollTimeout = requestAnimationFrame(() => {
             const threshold = 150;
             const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < threshold;
-            if (isAtBottom || chatMessages.scrollTop === 0) { // Force scroll on first msgs
+            if (isAtBottom || chatMessages.scrollTop === 0) {
                 chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
             }
             this.scrollTimeout = null;
@@ -195,6 +221,12 @@ class ChatManager {
     }
 
     appendStreamChunk(msgNode, chunkText) {
+        // Special check for streaming CoT
+        if (chunkText.includes('<thought>') || chunkText.includes('</thought>')) {
+             // Redraw the entire node if a block is closed/opened to keep it clean
+             // This is less efficient but necessary for complex structures
+             return; 
+        }
         msgNode.appendChild(document.createTextNode(chunkText));
         this.smoothScrollToBottom();
     }
@@ -317,12 +349,18 @@ async function sendMessage() {
     // Start Generation via ChatManager
     const signal = chatSession.startGeneration();
 
-    // Define Personas
+    // Multimodal Routing & Personas
+    const selectedModel = modelSelect.value;
+    const isGemini = selectedModel.includes('gemini');
+    const apiEndpoint = isGemini ? '/api/chat-gemini' : 'http://localhost:11434/api/chat';
+
     const persona = personaSelect.value;
     const personas = {
-        rixsz: "You are RIXSZ, a highly advanced AI assistant with image generation capabilities. Address me simply as 'Sir'. Be witty, extremely concise, and efficient. Do not be chatty. Your goal is speed and precision. Keep answers short. IMPORTANT: You can generate images - if the user asks you to create, draw, paint, or generate an image, acknowledge that you will create it.",
-        gemini: "You are a helpful, harmless, and honest AI assistant with image generation capabilities. Be polite, professional, and provide detailed answers. Act like Gemini. You can create images when users ask you to draw, paint, or generate visual content.",
-        translator: "You are a professional translator. Detect the source language and translate the user's text into English (or the requested language). Provide ONLY the translation. Do not explain anything."
+        rixsz: `You are RIXSZ, a Senior AI Architect. 
+Use a <thought> block to analyze the request before speaking. 
+Always favor speed and high-IQ precision.`,
+        gemini: "You are the Omni-reasoning Gemini 1.5 Pro. Use long-context and CoT reasoning.",
+        translator: "You are a professional translator."
     };
 
     let systemPrompt = personas[persona] || personas.rixsz; // Default to RIXSZ
@@ -524,61 +562,62 @@ async function sendMessage() {
         const messages = [];
         messages.push({ role: 'system', content: systemPrompt });
         chatHistory.forEach(msg => messages.push(msg));
-
-        // Add new user message
         const userMsg = { role: 'user', content: finalPrompt };
         messages.push(userMsg);
 
-        const response = await fetch('http://localhost:11434/api/chat', {
+        const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: modelSelect.value,
+                model: selectedModel,
                 messages: messages,
                 stream: true
             }),
             signal: signal
         });
 
-        if (!response.ok) throw new Error('Failed to connect to Ollama');
+        if (!response.ok) throw new Error(`Backend Offline (${isGemini ? 'Gemini API' : 'Ollama'})`);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullResponse = '';
 
-        aiMsgContent.innerHTML = ''; // Remove typing indicator
+        aiMsgContent.innerHTML = ''; 
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
             const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-                if (!line.trim()) continue;
-                try {
-                    const json = JSON.parse(line);
-                    if (json.message && json.message.content) {
-                        const content = json.message.content;
-                        fullResponse += content;
-                        chatSession.appendStreamChunk(aiMsgContent, content); // FAST APPEND
-                    }
-                    if (json.done) {
-                        chatHistory.push(userMsg);
-                        chatHistory.push({ role: 'assistant', content: fullResponse });
-
-                        if (chatHistory.length > HISTORY_LIMIT * 2) {
-                            chatHistory = chatHistory.slice(-HISTORY_LIMIT * 2);
+            if (isGemini) {
+                // Gemini returns JSON chunks with multiples or combined segments
+                await handleGeminiStream(chunk, aiMsgContent, (c) => {
+                    fullResponse += c;
+                    chatSession.smoothScrollToBottom();
+                });
+            } else {
+                // Ollama returns standard JSON lines
+                const lines = chunk.split('\n');
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const json = JSON.parse(line);
+                        if (json.message && json.message.content) {
+                            const content = json.message.content;
+                            fullResponse += content;
+                            chatSession.appendStreamChunk(aiMsgContent, content);
                         }
-
-                        speakText(fullResponse);
-                    }
-                } catch (e) {
-                    console.error('Error parsing JSON chunk', e);
+                    } catch(e) {}
                 }
             }
         }
+
+        chatHistory.push(userMsg);
+        chatHistory.push({ role: 'assistant', content: fullResponse });
+        if (chatHistory.length > HISTORY_LIMIT * 2) {
+            chatHistory = chatHistory.slice(-HISTORY_LIMIT * 2);
+        }
+        speakText(fullResponse);
 
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -591,4 +630,30 @@ async function sendMessage() {
         chatSession.stopGeneration();
     }
 }
+// --- Gemini Stream Handler ---
+async function handleGeminiStream(chunk, msgNode, onText) {
+    const lines = chunk.split('\n');
+    for (const line of lines) {
+        if (!line.trim() || line.startsWith('[')) continue; // Skip brackets in JSON array
+        
+        let cleanLine = line.trim();
+        if (cleanLine.startsWith(',')) cleanLine = cleanLine.slice(1);
+        if (cleanLine.endsWith(']')) cleanLine = cleanLine.slice(0, -1);
+        
+        try {
+            const json = JSON.parse(cleanLine);
+            if (json.candidates && json.candidates[0].content.parts) {
+                const text = json.candidates[0].content.parts[0].text;
+                onText(text);
+                
+                // If it's a thought block, it's safer to re-process the whole node after the stream
+                // but for live preview we append to a temporary storage
+                msgNode.appendChild(document.createTextNode(text));
+            }
+        } catch (e) {
+            // Partial JSON or heartbeat
+        }
+    }
+}
+
 // Removed old appendMessage
