@@ -354,18 +354,19 @@ async function sendMessage() {
     // Multimodal Routing & Personas
     const selectedModel = modelSelect.value;
     const isGemini = selectedModel.includes('gemini');
-    const apiEndpoint = isGemini ? '/api/chat-gemini' : 'http://localhost:11434/api/chat';
+    const apiEndpoint = isGemini ? '/api/chat-gemini' : '/api/chat-ollama';
 
     const persona = personaSelect.value;
     const personas = {
-        rixsz: `You are RIXSZ, a Senior AI Architect with RECURSIVE REASONING.
-MANDATORY WORKFLOW:
-1. PLAN: Hidden <thought> block defining the solution strategy.
-2. EXECUTE: The actual code or answer.
-3. VERIFY: Self-correction check within the <thought> block.
-Be wits, concise, and prioritize speed.`,
-        gemini: `You are the Omni-reasoning Gemini 1.5 Pro. Use 2M context and recursive Plan-Execute-Verify loops.`,
-        translator: "You are a professional translator."
+        rixsz: `You are RIXSZ, an Elite Agentic AI Architect. 
+CORE PROTOCOL (Flow Engineering):
+1. RESEARCH: If the prompt contains "Now", "Research", or "Latest", start by analyzing live search data.
+2. THINK/PLAN: Use a <thought> block for recursive step-by-step planning.
+3. EXECUTE: Deliver high-IQ, benchmark-grade solutions.
+4. REFLECT: If an error is detected, automatically trigger self-correction.
+Aesthetics: Address user as 'Sir'. Fast, witty, and precise.`,
+        gemini: `You are Gemini 1.5 Pro. Use 2M token caching and long-horizon planning. Focus on real-world tool orchestration.`,
+        translator: "Professional translation service."
     };
 
     let systemPrompt = personas[persona] || personas.rixsz; 
@@ -384,6 +385,13 @@ Be wits, concise, and prioritize speed.`,
     }
 
     let finalPrompt = text;
+
+    // RESEARCH BRIDGE: Auto-detect "Now/Research" keywords
+    const isResearchTrigger = /\b(now|research|latest|current|live)\b/i.test(text);
+    if (isResearchTrigger && !text.includes('/search-')) {
+        // Transparently guide the user to use the Search-Tor bridge
+        chatSession.appendMessage('ai', "🧬 *Intelligence Augmentation Triggered*: Sir, for live awareness, I recommend using `/search-tor` for the most recent data.");
+    }
 
     // Check for special commands first
     let isCommand = false;

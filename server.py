@@ -22,9 +22,10 @@ def get_local_code_context():
     included_ext = {'.js', '.py', '.html', '.css', '.sh', '.bat', '.md'}
     
     for root, dirs, files in os.walk('.'):
-        # Modification: avoid manual indexing by using slices on direct list if needed, 
-        # but here we just iterate naturally.
-        dirs[:] = [d for d in dirs if d not in excluded_dirs]
+        # Modification: standard way to prune dirs in os.walk
+        for d in list(dirs):
+            if d in excluded_dirs:
+                dirs.remove(d)
         for file in files:
             if any(file.endswith(ext) for ext in included_ext):
                 path = os.path.join(root, file)
@@ -164,6 +165,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 
             except Exception as e:
                 print(f"❌ Dark Web Search Error: {e}")
+        elif self.path == '/api/chat-ollama':
+            # Proxy to Local Ollama to avoid CORS and handle connection stability
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            print(f"🦙 Proxying request to Ollama...")
+            
+            try:
+                url = "http://127.0.0.1:11434/api/chat"
+                req = urllib.request.Request(url, data=post_data, headers={'Content-Type': 'application/json'})
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Cache-Control', 'no-cache')
+                self.end_headers()
+
+                with urllib.request.urlopen(req) as response:
+                    while True:
+                        line = response.readline()
+                        if not line: break
+                        self.wfile.write(line)
+                        self.wfile.flush()
+
+            except Exception as e:
+                print(f"❌ Ollama Proxy Error: {e}")
+                self.send_response(503) 
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Ollama unreachable: {str(e)}"}).encode('utf-8'))
+
         elif self.path == '/api/chat-gemini':
             # High-Intelligence Reasoning via Gemini 1.5 Pro
             if not GEMINI_API_KEY:
