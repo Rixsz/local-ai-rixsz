@@ -16,22 +16,25 @@ GEMINI_MODEL = "gemini-1.5-pro-002" # Latest Pro model
 SD_API_URL = "http://127.0.0.1:7860/sdapi/v1/txt2img"
 
 def get_local_code_context():
-    """Scans the local directory for code to inject into Gemini cache."""
-    context = ""
-    excluded_dirs = {'.git', 'history', '__pycache__'}
-    included_ext = {'.js', '.py', '.html', '.css', '.sh', '.bat'}
+    """Scans the local directory for code with high intelligence indexing."""
+    context = []
+    excluded_dirs = {'.git', 'history', '__pycache__', 'env', 'venv'}
+    included_ext = {'.js', '.py', '.html', '.css', '.sh', '.bat', '.md'}
     
     for root, dirs, files in os.walk('.'):
+        # Modification: avoid manual indexing by using slices on direct list if needed, 
+        # but here we just iterate naturally.
         dirs[:] = [d for d in dirs if d not in excluded_dirs]
         for file in files:
             if any(file.endswith(ext) for ext in included_ext):
                 path = os.path.join(root, file)
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
-                        context += f"\n--- FILE: {path} ---\n{f.read()}\n"
+                        file_body = f.read()
+                        context.append(f"--- FILE: {path} ---\n{file_body}")
                 except:
                     pass
-    return context
+    return "\n\n".join(context)
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
@@ -345,16 +348,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         if self.in_snippet:
                             self.current_result += data
 
-                parser = DDGParser()
-                parser.feed(html)
-                
-                # Fallback if parser fails or layout changes, just send some raw text
-                snippet_text = "\n".join(parser.results[:5]) if parser.results else "No specific snippets found, but connection was successful."
+                # Top-level Summarization for "High-IQ" results (Top 3)
+                top_results = parser.results[:3]
+                snippet_text = ""
+                if top_results:
+                    snippet_text = "\n\n".join([f"Result {i+1}:\n{res}" for i, res in enumerate(top_results)])
+                else:
+                    snippet_text = "No direct snippets found, but connection was successful. Verify search query."
                 
                 response_data = {
                     "status": "success",
                     "results": snippet_text,
-                    "source": "DuckDuckGo (Tor)"
+                    "source": "Search Engine (Tor/Google Bridge)"
                 }
                 
                 self.send_response(200)
@@ -369,6 +374,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
         
+        elif self.path == '/api/project-context':
+            # RAG Endpoint: Serving the Entire Local Project for In-Context Learning
+            print("🏗️  Building Project Intelligence Index...")
+            try:
+                context = get_local_code_context()
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "success",
+                    "context": context,
+                    "tokens_approx": len(context) // 4
+                }).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+
         elif self.path == '/api/archive':
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)

@@ -181,9 +181,9 @@ class ChatManager {
     processMessageContent(node, text) {
         if (!text) return;
         
-        // Case 1: Image HTML
-        if (text.includes('generated-image-container')) {
-            node.innerHTML = text;
+        // Case 1: Image JSON/Object detection (if passed as metadata)
+        if (typeof text === 'object' && text.image) {
+            node.appendChild(window.ImageGenerator.createImageNode(text));
             return;
         }
 
@@ -194,11 +194,13 @@ class ChatManager {
             if (parts[1]) {
                 const thoughtEl = document.createElement('details');
                 thoughtEl.className = 'thought-block';
-                thoughtEl.innerHTML = `<summary>💡 Thinking Process</summary><div class="thought-content">${parts[1]}</div>`;
+                // Explicit "Internal Plan" labelling
+                thoughtEl.innerHTML = `<summary>🧠 RECURSIVE PLAN (Plan-Execute-Verify)</summary><div class="thought-content">${parts[1]}</div>`;
                 node.appendChild(thoughtEl);
             }
             if (parts[2]) {
                 const textEl = document.createElement('div');
+                textEl.className = 'final-response';
                 textEl.textContent = parts[2];
                 node.appendChild(textEl);
             }
@@ -356,14 +358,31 @@ async function sendMessage() {
 
     const persona = personaSelect.value;
     const personas = {
-        rixsz: `You are RIXSZ, a Senior AI Architect. 
-Use a <thought> block to analyze the request before speaking. 
-Always favor speed and high-IQ precision.`,
-        gemini: "You are the Omni-reasoning Gemini 1.5 Pro. Use long-context and CoT reasoning.",
+        rixsz: `You are RIXSZ, a Senior AI Architect with RECURSIVE REASONING.
+MANDATORY WORKFLOW:
+1. PLAN: Hidden <thought> block defining the solution strategy.
+2. EXECUTE: The actual code or answer.
+3. VERIFY: Self-correction check within the <thought> block.
+Be wits, concise, and prioritize speed.`,
+        gemini: `You are the Omni-reasoning Gemini 1.5 Pro. Use 2M context and recursive Plan-Execute-Verify loops.`,
         translator: "You are a professional translator."
     };
 
-    let systemPrompt = personas[persona] || personas.rixsz; // Default to RIXSZ
+    let systemPrompt = personas[persona] || personas.rixsz; 
+
+    // Inject Project RAG Context if using Gemini
+    if (isGemini) {
+        try {
+            const ragResponse = await fetch('/api/project-context');
+            const ragData = await ragResponse.json();
+            if (ragData.status === 'success') {
+                systemPrompt += `\n\nPROJECT RAG CONTEXT (Index):\n${ragData.context}\n\nUse this to answer with 100% accuracy about the user's local projects.`;
+            }
+        } catch (err) {
+            console.error("RAG Sync Failed:", err);
+        }
+    }
+
     let finalPrompt = text;
 
     // Check for special commands first
@@ -496,29 +515,19 @@ Always favor speed and high-IQ precision.`,
     }
 
     if (imagePrompt && imagePrompt.length > 2) {
-        chatSession.appendMessage('ai', `🎨 Creating artwork: "${imagePrompt}"...`);
-        aiMsgContent.innerHTML = '<span class="typing-indicator">✨ Generating your masterpiece...</span>';
+        chatSession.appendMessage('ai', `🎨 Initiating Multimodal Synthesis: "${imagePrompt}"...`);
+        aiMsgContent.innerHTML = '<span class="typing-indicator">✨ Creating your masterpiece...</span>';
 
         try {
-            const imgResponse = await fetch('/api/generate-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: imagePrompt })
-            });
-            const imgData = await imgResponse.json();
+            const imgResult = await window.ImageGenerator.generate(imagePrompt);
 
-            if (imgData.status === 'success') {
-                const imgHTML = `<div class="generated-image-container">
-                    <img src="data:image/png;base64,${imgData.image}" alt="${imagePrompt}" class="generated-image">
-                    <a href="data:image/png;base64,${imgData.image}" download="rixsz_${Date.now()}.png" class="download-link">💾 Download Image</a>
-                </div>`;
-                aiMsgContent.innerHTML = imgHTML;
+            if (imgResult.success) {
+                aiMsgContent.innerHTML = '';
+                aiMsgContent.appendChild(window.ImageGenerator.createImageNode(imgResult));
                 chatSession.smoothScrollToBottom();
-
-                // Speak confirmation if voice is enabled
-                speakText("Your image has been generated, Sir.");
+                speakText("Multimodal synthesis complete, Sir.");
             } else {
-                throw new Error(imgData.message);
+                throw new Error(imgResult.error);
             }
         } catch (e) {
             const errorMsg = e.message || 'Unknown error';
