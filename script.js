@@ -834,4 +834,23 @@ async function handleGeminiStream(chunk, msgNode, onText) {
     }
 }
 
-// Removed old appendMessage
+// --- Share App Logic ---
+const shareAppBtn = document.getElementById('share-app-btn');
+if (shareAppBtn) {
+    shareAppBtn.addEventListener('click', () => {
+        const downloadLink = "https://github.com/Rixsz/local-ai-rixsz/archive/refs/heads/main.zip";
+        const message = `Check out this 100% Local AI Workspace (RIXSZ). Download for Windows: ${downloadLink}`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'RIXSZ Local AI',
+                text: 'Beautiful, fast, and local AI workspace.',
+                url: downloadLink,
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(message).then(() => {
+                alert("Download link copied to clipboard, Sir! You can now send it to your friends.");
+            });
+        }
+    });
+}

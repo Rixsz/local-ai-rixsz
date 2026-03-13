@@ -4,15 +4,17 @@ A beautiful, local AI workspace that runs completely offline on your Linux machi
 
 ![App Icon](icon.png)
 
-## Features
-- 🚀 **100% Local**: Works with your local Ollama instance.
-- 🔒 **Private**: No data leaves your machine.
-- 🔐 **Google Integration**: Connect your Google account to enable Web-Augmented Intelligence safely.
-- 🧅 **Dark Web Access**: Search .onion sites via Tor and Ahmia.
-- 🕵️ **Tor Search**: Anonymous search capability using Tor network.
-- 💾 **Saves History**: Archive your chat sessions locally.
-- 📱 **Desktop App**: Now bundled with Electron for deep-link OAuth support.
-- 📱 **Responsive Design**: Modern, glassmorphic UI.
+## 📥 QUICK DOWNLOAD (WINDOWS)
+
+Choose the easiest way to get started:
+
+1.  **[Click here to Download the Project (.zip)](https://github.com/Rixsz/local-ai-rixsz/archive/refs/heads/main.zip)**
+2.  **Extract the folder** to your Desktop.
+3.  **Double-click `install.bat`** and you're done!
+
+---
+
+## 🚀 Super Easy Installation (Windows)
 
 ## Special Commands
 
