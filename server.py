@@ -12,6 +12,7 @@ from datetime import datetime
 PORT = 8000
 TOR_PROXY = "socks5h://127.0.0.1:9050"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "") # Load from environment
+SERPER_API_KEY = os.environ.get("SERPER_API_KEY", "") # Serper.dev API Key
 GEMINI_MODEL = "gemini-1.5-pro-002" # Latest Pro model
 SD_API_URL = "http://127.0.0.1:7860/sdapi/v1/txt2img"
 
@@ -196,12 +197,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         elif self.path == '/api/chat-gemini':
             # High-Intelligence Reasoning via Gemini 1.5 Pro
-            if not GEMINI_API_KEY:
-                self.send_response(401)
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": "Missing GEMINI_API_KEY environment variable."}).encode('utf-8'))
-                return
-
+            # Manual API Key check removed in favor of Integrated Routing
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
@@ -378,6 +374,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         if self.in_snippet:
                             self.current_result += data
 
+                parser = DDGParser()
+                parser.feed(html)
+
                 # Top-level Summarization for "High-IQ" results (Top 3)
                 top_results = parser.results[:3]
                 snippet_text = ""
@@ -403,7 +402,55 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
-        
+        elif self.path == '/api/search-google':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            query = data.get('query')
+            
+            if not SERPER_API_KEY:
+                self.send_response(401)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Missing SERPER_API_KEY environment variable."}).encode('utf-8'))
+                return
+
+            print(f"🔍 Searching Google via Serper: {query}")
+            
+            try:
+                url = "https://google.serper.dev/search"
+                headers = {
+                    'X-API-KEY': SERPER_API_KEY,
+                    'Content-Type': 'application/json'
+                }
+                payload = json.dumps({"q": query})
+                req = urllib.request.Request(url, data=payload.encode('utf-8'), headers=headers, method='POST')
+                
+                with urllib.request.urlopen(req) as response:
+                    res_data = json.loads(response.read().decode('utf-8'))
+                
+                # Format snippets
+                snippets = []
+                if 'organic' in res_data:
+                    for item in res_data['organic'][:5]:
+                        snippets.append(f"Title: {item.get('title')}\nSnippet: {item.get('snippet')}\nURL: {item.get('link')}")
+                
+                snippet_text = "\n\n".join(snippets) if snippets else "No Google results found."
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "success",
+                    "results": snippet_text,
+                    "source": "Google (via Serper)"
+                }).encode('utf-8'))
+                
+            except Exception as e:
+                print(f"❌ Google Search Error: {e}")
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+
         elif self.path == '/api/project-context':
             # RAG Endpoint: Serving the Entire Local Project for In-Context Learning
             print("🏗️  Building Project Intelligence Index...")

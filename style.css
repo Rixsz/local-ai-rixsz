@@ -97,6 +97,85 @@ body {
     color: var(--text-primary);
 }
 
+/* Google Connect Section */
+.google-connect-container {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.auth-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.disconnected .status-dot {
+    background-color: #ff453a;
+    box-shadow: 0 0 8px #ff453a;
+}
+
+.connected .status-dot {
+    background-color: #32d74b;
+    box-shadow: 0 0 8px #32d74b;
+}
+
+.disconnected #status-text { color: #ff453a; }
+.connected #status-text { color: #32d74b; }
+
+.google-btn {
+    width: 100%;
+    background: #ffffff;
+    color: #000000;
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.google-btn:hover {
+    background: #f0f0f0;
+    transform: translateY(-1px);
+}
+
+.google-btn:active {
+    transform: translateY(0);
+}
+
+.rx-logo-mini {
+    width: 18px;
+    height: 18px;
+}
+
+.privacy-note {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    text-align: center;
+    opacity: 0.8;
+}
+
 /* Main Chat Area */
 .chat-main {
     background-color: var(--bg-color);

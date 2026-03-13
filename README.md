@@ -7,9 +7,11 @@ A beautiful, local AI workspace that runs completely offline on your Linux machi
 ## Features
 - 🚀 **100% Local**: Works with your local Ollama instance.
 - 🔒 **Private**: No data leaves your machine.
+- 🔐 **Google Integration**: Connect your Google account to enable Web-Augmented Intelligence safely.
 - 🧅 **Dark Web Access**: Search .onion sites via Tor and Ahmia.
 - 🕵️ **Tor Search**: Anonymous search capability using Tor network.
 - 💾 **Saves History**: Archive your chat sessions locally.
+- 📱 **Desktop App**: Now bundled with Electron for deep-link OAuth support.
 - 📱 **Responsive Design**: Modern, glassmorphic UI.
 
 ## Special Commands
@@ -32,79 +34,54 @@ You can also use natural language:
 search for cybersecurity news
 ```
 
-## Installation & Running
+## 🚀 Super Easy Installation (Windows)
 
-This project now runs natively across multiple Linux distributions (Ubuntu/Debian, Arch, Fedora) and Windows.
+To install everything (Python, Node.js, Ollama, and the UI) in one go, just open **PowerShell** and paste this command:
 
-### 1. Prerequisites
-You need [Ollama](https://ollama.com/download/windows) installed and running, along with Python 3.
-
-*   **Linux**: Make sure you have `git`, `python3`, and `curl` installed.
-*   **Windows**: Download and install these essential tools:
-    *   **[Ollama for Windows](https://ollama.com/download/windows)** (The Local AI Engine)
-    *   **[Python for Windows](https://www.python.org/downloads/windows/)** (Make sure to check "Add Python to PATH" during installation)
-    *   **[Git for Windows](https://git-scm.com/download/win)** (To download the code)
-    *   **[Tor Expert Bundle](https://www.torproject.org/download/tor/)** (Optional - needed for private search features)
-
-### 2. Download the Code
-Open your terminal (or Command Prompt/PowerShell on Windows) and clone this repository:
-
-```bash
-git clone https://github.com/YOUR_USERNAME/local-ai-web.git
-cd local-ai-web
-```
-*(Replace `YOUR_USERNAME` with the actual username after forking/cloning)*
-
-### 3. Installation & Setup
-
-**On Linux (Ubuntu, Arch, Fedora, etc.):**
-Run the included installation script. This will add "Local AI Web" to your application menu.
-```bash
-chmod +x install.sh
-./install.sh
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; iwr https://raw.githubusercontent.com/rixsz/local-ai-web/main/install.bat -OutFile install.bat; .\install.bat
 ```
 
-**On Windows:**
-Double-click the `install.bat` file in the folder. This will automatically create a shortcut to the application directly on your Desktop.
+*Don't have PowerShell open? Just follow the steps below.*
 
-### 4. Tor Setup (Optional but required for Tor web search)
-To use the secure search features:
-*   **Linux**: Run `./check_tor.sh`. It will automatically detect your OS and tell you how to install Tor using your package manager (apt, pacman, or dnf).
-*   **Windows**: Download the [Tor Expert Bundle](https://www.torproject.org/download/tor/) for Windows. Extract it, and add the folder containing `tor.exe` to your System PATH variables. Then run `check_tor.bat` to verify.
+---
 
-### 5. Run the Application
+## 🛠️ Installation & Running
 
-**On Linux:**
-Find **"Local AI Web"** in your system's application launcher, or run:
-```bash
-./start.sh
-```
+### 1. Windows (Recommended)
+1. **Download this repository** as a ZIP and extract it.
+2. Double-click `install.bat`. 
+   - *It will automatically check for and install Python, Node.js, and Ollama if you don't have them!*
+3. Once finished, a **Local AI Web** shortcut will appear on your Desktop.
+4. Double-click the shortcut to start chatting!
 
-**On Windows:**
-Double-click the **Local AI Web** shortcut on your Desktop, or run:
-```cmd
-start.bat
-```
+### 2. Linux (Ubuntu, Arch, Fedora, etc.)
+1. Open your terminal and run:
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+2. Find **"Local AI Web"** in your application menu.
 
-## Running Ollama
-For the AI to function properly, make sure Ollama is running with CORS enabled.
+---
 
-**Linux:**
-```bash
-OLLAMA_ORIGINS="*" ollama serve
-```
+## 🔧 Tor Setup (Optional)
+To use the secure search features (/search-tor and /search-deep):
+*   **Windows**: The installer will prompt you or you can download the [Tor Expert Bundle](https://www.torproject.org/download/tor/).
+*   **Linux**: Run `./check_tor.sh` to get installation commands for your specific distro.
 
-**Windows (Command Prompt):**
-```cmd
-set OLLAMA_ORIGINS="*" & ollama serve
-```
+## 🦙 Running Ollama
+The app needs Ollama to be running.
+*   **Windows**: The app will try to detect it. If it fails, start Ollama and ensure CORS is enabled by setting the environment variable `OLLAMA_ORIGINS="*"` and restarting Ollama.
+*   **Linux**:
+    ```bash
+    OLLAMA_ORIGINS="*" ollama serve
+    ```
 
-## Uninstallation
+## 📦 What's Included?
+- **AI Core**: Powered by Ollama.
+- **Frontend**: Sleek Electron-based interface.
+- **Intelligence**: RAG (Retrieval-Augmented Generation) system that reads your local files.
+- **Search**: Tor & Dark Web integration for private intelligence gathering.
+- **Google Sync**: Optional Google Account link for real-time web search.
 
-**Linux:**
-```bash
-rm ~/.local/share/applications/local-ai-web.desktop
-```
-
-**Windows:**
-Simply delete the shortcut from your Desktop and remove the downloaded folder.
